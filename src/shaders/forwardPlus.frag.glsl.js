@@ -1,7 +1,5 @@
-export default function(params) {
+export default function (params) {
   return `
-  // TODO: This is pretty much just a clone of forward.frag.glsl.js
-
   #version 100
   precision highp float;
 
@@ -9,8 +7,15 @@ export default function(params) {
   uniform sampler2D u_normap;
   uniform sampler2D u_lightbuffer;
 
-  // TODO: Read this buffer to determine the lights influencing a cluster
   uniform sampler2D u_clusterbuffer;
+  uniform float u_clusterWidth;
+  uniform float u_clusterHeight;
+  uniform float u_nearClip;
+  uniform float u_farClip;
+  uniform int u_xSlices;
+  uniform int u_ySlices;
+  uniform int u_zSlices;
+  uniform mat4 u_viewMatrix;
 
   varying vec3 v_position;
   varying vec3 v_normal;
@@ -53,12 +58,7 @@ export default function(params) {
     vec4 v1 = texture2D(u_lightbuffer, vec2(u, 0.3));
     vec4 v2 = texture2D(u_lightbuffer, vec2(u, 0.6));
     light.position = v1.xyz;
-
-    // LOOK: This extracts the 4th float (radius) of the (index)th light in the buffer
-    // Note that this is just an example implementation to extract one float.
-    // There are more efficient ways if you need adjacent values
     light.radius = ExtractFloat(u_lightbuffer, ${params.numLights}, 2, index, 3);
-
     light.color = v2.rgb;
     return light;
   }
@@ -79,17 +79,45 @@ export default function(params) {
     vec3 normap = texture2D(u_normap, v_uv).xyz;
     vec3 normal = applyNormalMap(v_normal, normap);
 
+    // Transform the fragment position to camera space
+    vec4 fragPosCameraSpace = u_viewMatrix * vec4(v_position, 1.0);
+
+    // Determine the cluster for a fragment using its position in camera space
+    float depth = (length(-fragPosCameraSpace.xyz) - u_nearClip) / (u_farClip - u_nearClip);
+    int clusterX = int((fragPosCameraSpace.x + u_clusterWidth / 2.0) / u_clusterWidth);
+    int clusterY = int((fragPosCameraSpace.y + u_clusterHeight / 2.0) / u_clusterHeight);
+    int clusterZ = int(depth * float(u_zSlices));
+    int clusterIdx = clusterX + clusterY * u_xSlices + clusterZ * u_xSlices * u_ySlices;
+    float clusterCount = ExtractFloat(u_clusterbuffer, int(u_xSlices * u_ySlices * u_zSlices), int(${params.maxLightsPerCluster} + 1), clusterIdx, 0);
+
+    int texture_width = int(u_xSlices * u_ySlices * u_zSlices);
+    int texture_height = int(ceil((float(${params.maxLightsPerCluster}) + 1.0) / 4.0));
+
+    if (clusterIdx > texture_width) {
+      gl_FragColor = vec4(vec3(1, 0, 0), 1.0);
+      return;
+    }
+
+    int num_lights = int(ExtractFloat(u_clusterbuffer, texture_width, texture_height, idx, 0));
+    
+    // Read in the lights in that cluster from the populated data
     vec3 fragColor = vec3(0.0);
+    for (int light = 0; light < ${params.maxLightsPerCluster}; ++light) {
+      if (light >= num_lights) {
+        break;
+      }
+      else {
+        int light_idx = int(ExtractFloat(u_clusterbuffer, texture_width, texture_height, idx, light + 1));
+        Light this_light = UnpackLight(light_idx);
 
-    for (int i = 0; i < ${params.numLights}; ++i) {
-      Light light = UnpackLight(i);
-      float lightDistance = distance(light.position, v_position);
-      vec3 L = (light.position - v_position) / lightDistance;
+        float lightDistance = distance(this_light.position, v_position);
+        vec3 L = (this_light.position - v_position) / lightDistance;
 
-      float lightIntensity = cubicGaussian(2.0 * lightDistance / light.radius);
-      float lambertTerm = max(dot(L, normal), 0.0);
+        float lightIntensity = cubicGaussian(2.0 * lightDistance / this_light.radius);
+        float lambertTerm = max(dot(L, normal), 0.0);
 
-      fragColor += albedo * lambertTerm * light.color * vec3(lightIntensity);
+        fragColor += albedo * lambertTerm * this_light.color * vec3(lightIntensity);
+      }
     }
 
     const vec3 ambientLight = vec3(0.025);

@@ -14,12 +14,12 @@ export const NUM_GBUFFERS = 4;
 export default class ClusteredDeferredRenderer extends BaseRenderer {
   constructor(xSlices, ySlices, zSlices) {
     super(xSlices, ySlices, zSlices);
-    
+
     this.setupDrawBuffers(canvas.width, canvas.height);
-    
+
     // Create a texture to store light data
     this._lightTexture = new TextureBuffer(NUM_LIGHTS, 8);
-    
+
     this._progCopy = loadShaderProgram(toTextureVert, toTextureFrag, {
       uniforms: ['u_viewProjectionMatrix', 'u_colmap', 'u_normap'],
       attribs: ['a_position', 'a_normal', 'a_uv'],
@@ -43,7 +43,7 @@ export default class ClusteredDeferredRenderer extends BaseRenderer {
     this._height = height;
 
     this._fbo = gl.createFramebuffer();
-    
+
     //Create, bind, and store a depth target texture for the FBO
     this._depthTex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, this._depthTex);
@@ -71,7 +71,7 @@ export default class ClusteredDeferredRenderer extends BaseRenderer {
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.FLOAT, null);
       gl.bindTexture(gl.TEXTURE_2D, null);
 
-      gl.framebufferTexture2D(gl.FRAMEBUFFER, attachments[i], gl.TEXTURE_2D, this._gbuffers[i], 0);      
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, attachments[i], gl.TEXTURE_2D, this._gbuffers[i], 0);
     }
 
     if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) != gl.FRAMEBUFFER_COMPLETE) {
@@ -126,7 +126,7 @@ export default class ClusteredDeferredRenderer extends BaseRenderer {
 
     // Draw the scene. This function takes the shader program so that the model's textures can be bound to the right inputs
     scene.draw(this._progCopy);
-    
+
     // Update the buffer used to populate the texture packed with light data
     for (let i = 0; i < NUM_LIGHTS; ++i) {
       this._lightTexture.buffer[this._lightTexture.bufferIndex(i, 0) + 0] = scene.lights[i].position[0];
