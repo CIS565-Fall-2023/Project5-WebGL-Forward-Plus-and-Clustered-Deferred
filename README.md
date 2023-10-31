@@ -11,13 +11,13 @@ WebGL Forward+ and Clustered Deferred Shading
 ---
 ## Live Online
 
-[![](img/thumb.png)](http://TODO.github.io/Project5-WebGL-Forward-Plus-and-Clustered-Deferred)
+For some reason, I am not able to run the live demo. I am still trying to figure out the reason. I will update the link here once I figure it out. However, welcome to clone the repo and run it locally.
 
 ---
 
 ## Demo Video/GIF
 
-[![](img/video.png)](TODO)
+![Demo GIF](./img/demo.gif)
 
 ---
 
@@ -100,16 +100,6 @@ Transitioning from tiles to clusters introduces several advantages aimed at boos
 Deferred Shading is a rendering technique designed to enhance performance by decoupling the shading and lighting calculations from the geometry computations. In contrast to the traditional forward rendering pipeline—where the scene is rendered iteratively for each light, leading to inefficiency—Deferred Shading streamlines the process. It initially renders the scene into a G-buffer, storing the geometry information of the scene. Subsequently, the scene is rendered again utilizing the G-buffer alongside the scene’s lights, which significantly reduces the number of renderings required and, consequently, boosts performance. The table below provides a visual representation of the various G-buffers utilized.
 
 <div>
-  <style>
-    .g-buffer-table img {
-      width: 500px;
-      height: 400px;
-    }
-    .g-buffer-table td {
-      text-align: center;
-      vertical-align: middle;
-    }
-  </style>
   <table class="g-buffer-table", align='center'>
     <caption style="font-weight:bold; font-size:1.2em;">G-Buffer Components</caption>
     <tr>
@@ -117,16 +107,16 @@ Deferred Shading is a rendering technique designed to enhance performance by dec
       <td><img src="./img/normal.png" alt="Normal"></td>
     </tr>
     <tr>
-      <td>Position</td>
+      <td align='center'>Position</td>
       <td>Normal</td>
     </tr>
     <tr>
-      <td><img src="./img/albedo.png" alt="Albedo"></td>
-      <td><img src="./img/specular.png" alt="Specular"></td>
+      <td align='center'><img src="./img/albedo.png" alt="Albedo"></td>
+      <td align='center'><img src="./img/specular.png" alt="Specular"></td>
     </tr>
     <tr>
-      <td>Albedo</td>
-      <td>Specular</td>
+      <td align='center'>Albedo</td>
+      <td align='center'>Specular</td>
     </tr>
   </table>
 </div>
@@ -184,16 +174,6 @@ vec3 DecodeNormal(vec2 f) {
 It is important to note that the use of encoding and decoding mechanisms introduces some loss of precision, which is evident when observing the accompanying graph. Despite this, we have deemed this compromise acceptable in order to achieve a reduction in the G-buffer size.
 
 <div>
-  <style>
-    .g-buffer-table img {
-      width: 400px;
-      height: 200px;
-    }
-    .g-buffer-table td {
-      text-align: center;
-      vertical-align: middle;
-    }
-  </style>
   <table class="g-buffer-table" align="center">
     <caption style="font-weight:bold; font-size:1.2em;">G-Buffer Components</caption>
     <tr>
@@ -201,8 +181,8 @@ It is important to note that the use of encoding and decoding mechanisms introdu
       <td><img src="./img/optimized.png" alt="Normal"></td>
     </tr>
     <tr>
-      <td>Clustered Deferred Rendering</td>
-      <td>Optimized Clustered Deferred Rendering</td>
+      <td align='center'>Clustered Deferred Rendering</td>
+      <td align='center'>Optimized Clustered Deferred Rendering</td>
     </tr>
   </table>
 </div>
