@@ -17,7 +17,7 @@ For some reason, I am not able to run the live demo. I am still trying to figure
 
 ## Demo Video/GIF
 
-![Demo GIF](./img/demo.gif)
+You can find the demo video [here](https://youtu.be/ype4rfLFWNk).
 
 ---
 
