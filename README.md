@@ -176,7 +176,6 @@ It is important to note that the use of encoding and decoding mechanisms introdu
 
 <div>
   <table class="g-buffer-table" align="center">
-    <caption style="font-weight:bold; font-size:1.2em;">G-Buffer Components</caption>
     <tr>
       <td><img src="./img/cluster_rendering.png" alt="Position"></td>
       <td><img src="./img/optimized.png" alt="Normal"></td>
