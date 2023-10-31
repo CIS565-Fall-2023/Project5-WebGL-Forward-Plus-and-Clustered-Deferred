@@ -99,9 +99,10 @@ Transitioning from tiles to clusters introduces several advantages aimed at boos
 
 Deferred Shading is a rendering technique designed to enhance performance by decoupling the shading and lighting calculations from the geometry computations. In contrast to the traditional forward rendering pipeline—where the scene is rendered iteratively for each light, leading to inefficiency—Deferred Shading streamlines the process. It initially renders the scene into a G-buffer, storing the geometry information of the scene. Subsequently, the scene is rendered again utilizing the G-buffer alongside the scene’s lights, which significantly reduces the number of renderings required and, consequently, boosts performance. The table below provides a visual representation of the various G-buffers utilized.
 
+**G-Buffer Components**
+
 <div>
   <table class="g-buffer-table", align='center'>
-    <caption style="font-weight:bold; font-size:1.2em;">G-Buffer Components</caption>
     <tr>
       <td><img src="./img/position.png" alt="Position"></td>
       <td><img src="./img/normal.png" alt="Normal"></td>
