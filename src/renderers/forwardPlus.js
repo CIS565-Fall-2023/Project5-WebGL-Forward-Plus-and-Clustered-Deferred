@@ -1,7 +1,8 @@
 import { gl } from '../init';
-import { mat4, vec4, vec3 } from 'gl-matrix';
+import { mat4 } from 'gl-matrix';
 import { loadShaderProgram } from '../utils';
 import { NUM_LIGHTS } from '../scene';
+import { MAX_LIGHTS_PER_CLUSTER } from './base';
 import vsSource from '../shaders/forwardPlus.vert.glsl';
 import fsSource from '../shaders/forwardPlus.frag.glsl.js';
 import TextureBuffer from './textureBuffer';
@@ -16,8 +17,11 @@ export default class ForwardPlusRenderer extends BaseRenderer {
 
     this._shaderProgram = loadShaderProgram(vsSource, fsSource({
       numLights: NUM_LIGHTS,
+      maxLightsPerCluster: MAX_LIGHTS_PER_CLUSTER
     }), {
-      uniforms: ['u_viewProjectionMatrix', 'u_colmap', 'u_normap', 'u_lightbuffer', 'u_clusterbuffer', 'u_clusterWidth', 'u_clusterHeight', 'u_nearClip', 'u_farClip', 'u_xSlices', 'u_ySlices', 'u_zSlices', 'u_viewMatrix'],
+      uniforms: ['u_viewProjectionMatrix', 'u_colmap', 'u_normap',
+        'u_lightbuffer', 'u_clusterbuffer', 'u_xSlices', 'u_ySlices',
+        'u_zSlices', 'u_viewMatrix', 'u_fov', 'u_near', 'u_far', 'u_cameraAspect'],
       attribs: ['a_position', 'a_normal', 'a_uv'],
     });
 
@@ -76,19 +80,14 @@ export default class ForwardPlusRenderer extends BaseRenderer {
     gl.uniform1i(this._shaderProgram.u_clusterbuffer, 3);
 
     // TODO: Bind any other shader inputs
-    const width = 2 * Math.tan(camera.fov / 2);
-    const height = width / camera.aspect;
-    const clusterWidth = width / this._xSlices;
-    const clusterHeight = height / this._ySlices;
-
-    gl.uniform1f(this._shaderProgram.u_clusterWidth, clusterWidth);
-    gl.uniform1f(this._shaderProgram.u_clusterHeight, clusterHeight);
-    gl.uniform1f(this._shaderProgram.u_nearClip, camera.near);
-    gl.uniform1f(this._shaderProgram.u_farClip, camera.far);
-    gl.uniform1i(this._shaderProgram.u_xSlices, this._xSlices);
-    gl.uniform1i(this._shaderProgram.u_ySlices, this._ySlices);
-    gl.uniform1i(this._shaderProgram.u_zSlices, this._zSlices);
+    gl.uniform1f(this._shaderProgram.u_xSlices, this._xSlices);
+    gl.uniform1f(this._shaderProgram.u_ySlices, this._ySlices);
+    gl.uniform1f(this._shaderProgram.u_zSlices, this._zSlices);
     gl.uniformMatrix4fv(this._shaderProgram.u_viewMatrix, false, this._viewMatrix);
+    gl.uniform1f(this._shaderProgram.u_fov, camera.fov);
+    gl.uniform1f(this._shaderProgram.u_near, camera.near);
+    gl.uniform1f(this._shaderProgram.u_far, camera.far);
+    gl.uniform1f(this._shaderProgram.u_cameraAspect, camera.aspect);
 
     // Draw the scene. This function takes the shader program so that the model's textures can be bound to the right inputs
     scene.draw(this._shaderProgram);

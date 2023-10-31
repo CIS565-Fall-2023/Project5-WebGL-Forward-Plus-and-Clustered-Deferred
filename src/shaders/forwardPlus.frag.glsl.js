@@ -8,14 +8,14 @@ export default function (params) {
   uniform sampler2D u_lightbuffer;
 
   uniform sampler2D u_clusterbuffer;
-  uniform float u_clusterWidth;
-  uniform float u_clusterHeight;
-  uniform float u_nearClip;
-  uniform float u_farClip;
-  uniform int u_xSlices;
-  uniform int u_ySlices;
-  uniform int u_zSlices;
+  uniform float u_xSlices;
+  uniform float u_ySlices;
+  uniform float u_zSlices;
   uniform mat4 u_viewMatrix;
+  uniform float u_fov;
+  uniform float u_near;
+  uniform float u_far;
+  uniform float u_cameraAspect;
 
   varying vec3 v_position;
   varying vec3 v_normal;
@@ -55,10 +55,15 @@ export default function (params) {
   Light UnpackLight(int index) {
     Light light;
     float u = float(index + 1) / float(${params.numLights + 1});
-    vec4 v1 = texture2D(u_lightbuffer, vec2(u, 0.3));
-    vec4 v2 = texture2D(u_lightbuffer, vec2(u, 0.6));
+    vec4 v1 = texture2D(u_lightbuffer, vec2(u, 0.0));
+    vec4 v2 = texture2D(u_lightbuffer, vec2(u, 0.5));
     light.position = v1.xyz;
+
+    // LOOK: This extracts the 4th float (radius) of the (index)th light in the buffer
+    // Note that this is just an example implementation to extract one float.
+    // There are more efficient ways if you need adjacent values
     light.radius = ExtractFloat(u_lightbuffer, ${params.numLights}, 2, index, 3);
+
     light.color = v2.rgb;
     return light;
   }
@@ -80,34 +85,42 @@ export default function (params) {
     vec3 normal = applyNormalMap(v_normal, normap);
 
     // Transform the fragment position to camera space
-    vec4 fragPosCameraSpace = u_viewMatrix * vec4(v_position, 1.0);
+    vec4 viewPos = u_viewMatrix * vec4(v_position, 1.0);
+    viewPos.z = -viewPos.z;
 
     // Determine the cluster for a fragment using its position in camera space
-    float depth = (length(-fragPosCameraSpace.xyz) - u_nearClip) / (u_farClip - u_nearClip);
-    int clusterX = int((fragPosCameraSpace.x + u_clusterWidth / 2.0) / u_clusterWidth);
-    int clusterY = int((fragPosCameraSpace.y + u_clusterHeight / 2.0) / u_clusterHeight);
-    int clusterZ = int(depth * float(u_zSlices));
-    int clusterIdx = clusterX + clusterY * u_xSlices + clusterZ * u_xSlices * u_ySlices;
-    float clusterCount = ExtractFloat(u_clusterbuffer, int(u_xSlices * u_ySlices * u_zSlices), int(${params.maxLightsPerCluster} + 1), clusterIdx, 0);
+    float yFov = tan(u_fov * 0.5 * 3.14159 / 180.0);
+    float xFov = yFov * u_cameraAspect;
+
+    float xSliceHalfWidth = xFov * viewPos.z;
+    float ySliceHalfWidth = yFov * viewPos.z;
+
+    // Compute the cluster indices for the fragment
+    int xCluster = int((viewPos.x + xSliceHalfWidth) * float(u_xSlices) / (2.0 * xSliceHalfWidth) / float(u_xSlices));
+    int yCluster = int((viewPos.y + ySliceHalfWidth) * float(u_ySlices) / (2.0 * ySliceHalfWidth) / float(u_ySlices));
+    int zCluster = int(u_zSlices * viewPos.z / (u_far - u_near));
 
     int texture_width = int(u_xSlices * u_ySlices * u_zSlices);
     int texture_height = int(ceil((float(${params.maxLightsPerCluster}) + 1.0) / 4.0));
+
+    int clusterIdx = xCluster + yCluster * int(u_xSlices) + zCluster * int(u_xSlices) * int(u_ySlices);
 
     if (clusterIdx > texture_width) {
       gl_FragColor = vec4(vec3(1, 0, 0), 1.0);
       return;
     }
 
-    int num_lights = int(ExtractFloat(u_clusterbuffer, texture_width, texture_height, idx, 0));
+    int num_lights = int(ExtractFloat(u_clusterbuffer, texture_width, texture_height, clusterIdx, 0));
     
     // Read in the lights in that cluster from the populated data
     vec3 fragColor = vec3(0.0);
+
     for (int light = 0; light < ${params.maxLightsPerCluster}; ++light) {
       if (light >= num_lights) {
         break;
       }
       else {
-        int light_idx = int(ExtractFloat(u_clusterbuffer, texture_width, texture_height, idx, light + 1));
+        int light_idx = int(ExtractFloat(u_clusterbuffer, texture_width, texture_height, clusterIdx, light + 1));
         Light this_light = UnpackLight(light_idx);
 
         float lightDistance = distance(this_light.position, v_position);
@@ -120,7 +133,7 @@ export default function (params) {
       }
     }
 
-    const vec3 ambientLight = vec3(0.025);
+    const vec3 ambientLight = vec3(0.2);
     fragColor += albedo * ambientLight;
 
     gl_FragColor = vec4(fragColor, 1.0);
