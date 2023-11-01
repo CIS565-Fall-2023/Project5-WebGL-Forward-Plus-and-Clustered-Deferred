@@ -1,7 +1,5 @@
-export default function(params) {
+export default function (params) {
   return `
-  // TODO: This is pretty much just a clone of forward.frag.glsl.js
-
   #version 100
   precision highp float;
 
@@ -9,8 +7,15 @@ export default function(params) {
   uniform sampler2D u_normap;
   uniform sampler2D u_lightbuffer;
 
-  // TODO: Read this buffer to determine the lights influencing a cluster
   uniform sampler2D u_clusterbuffer;
+  uniform float u_xSlices;
+  uniform float u_ySlices;
+  uniform float u_zSlices;
+  uniform mat4 u_viewMatrix;
+  uniform float u_fov;
+  uniform float u_near;
+  uniform float u_far;
+  uniform float u_cameraAspect;
 
   varying vec3 v_position;
   varying vec3 v_normal;
@@ -50,8 +55,8 @@ export default function(params) {
   Light UnpackLight(int index) {
     Light light;
     float u = float(index + 1) / float(${params.numLights + 1});
-    vec4 v1 = texture2D(u_lightbuffer, vec2(u, 0.3));
-    vec4 v2 = texture2D(u_lightbuffer, vec2(u, 0.6));
+    vec4 v1 = texture2D(u_lightbuffer, vec2(u, 0.0));
+    vec4 v2 = texture2D(u_lightbuffer, vec2(u, 0.5));
     light.position = v1.xyz;
 
     // LOOK: This extracts the 4th float (radius) of the (index)th light in the buffer
@@ -79,20 +84,56 @@ export default function(params) {
     vec3 normap = texture2D(u_normap, v_uv).xyz;
     vec3 normal = applyNormalMap(v_normal, normap);
 
-    vec3 fragColor = vec3(0.0);
+    // Transform the fragment position to camera space
+    vec4 viewPos = u_viewMatrix * vec4(v_position, 1.0);
+    viewPos.z = -viewPos.z;
 
-    for (int i = 0; i < ${params.numLights}; ++i) {
-      Light light = UnpackLight(i);
-      float lightDistance = distance(light.position, v_position);
-      vec3 L = (light.position - v_position) / lightDistance;
+    // Determine the cluster for a fragment using its position in camera space
+    float yFov = tan(u_fov * 0.5 * 3.14159 / 180.0);
+    float xFov = yFov * u_cameraAspect;
 
-      float lightIntensity = cubicGaussian(2.0 * lightDistance / light.radius);
-      float lambertTerm = max(dot(L, normal), 0.0);
+    float xSliceHalfWidth = xFov * viewPos.z;
+    float ySliceHalfWidth = yFov * viewPos.z;
 
-      fragColor += albedo * lambertTerm * light.color * vec3(lightIntensity);
+    // Compute the cluster indices for the fragment
+    int xCluster = int((viewPos.x + xSliceHalfWidth) * float(u_xSlices) / (2.0 * xSliceHalfWidth) / float(u_xSlices));
+    int yCluster = int((viewPos.y + ySliceHalfWidth) * float(u_ySlices) / (2.0 * ySliceHalfWidth) / float(u_ySlices));
+    int zCluster = int(u_zSlices * viewPos.z / (u_far - u_near));
+
+    int texture_width = int(u_xSlices * u_ySlices * u_zSlices);
+    int texture_height = int(ceil((float(${params.maxLightsPerCluster}) + 1.0) / 4.0));
+
+    int clusterIdx = xCluster + yCluster * int(u_xSlices) + zCluster * int(u_xSlices) * int(u_ySlices);
+
+    if (clusterIdx > texture_width) {
+      gl_FragColor = vec4(vec3(1, 0, 0), 1.0);
+      return;
     }
 
-    const vec3 ambientLight = vec3(0.025);
+    int num_lights = int(ExtractFloat(u_clusterbuffer, texture_width, texture_height, clusterIdx, 0));
+    
+    // Read in the lights in that cluster from the populated data
+    vec3 fragColor = vec3(0.0);
+
+    for (int light = 0; light < ${params.maxLightsPerCluster}; ++light) {
+      if (light >= num_lights) {
+        break;
+      }
+      else {
+        int light_idx = int(ExtractFloat(u_clusterbuffer, texture_width, texture_height, clusterIdx, light + 1));
+        Light this_light = UnpackLight(light_idx);
+
+        float lightDistance = distance(this_light.position, v_position);
+        vec3 L = (this_light.position - v_position) / lightDistance;
+
+        float lightIntensity = cubicGaussian(2.0 * lightDistance / this_light.radius);
+        float lambertTerm = max(dot(L, normal), 0.0);
+
+        fragColor += albedo * lambertTerm * this_light.color * vec3(lightIntensity);
+      }
+    }
+
+    const vec3 ambientLight = vec3(0.2);
     fragColor += albedo * ambientLight;
 
     gl_FragColor = vec4(fragColor, 1.0);

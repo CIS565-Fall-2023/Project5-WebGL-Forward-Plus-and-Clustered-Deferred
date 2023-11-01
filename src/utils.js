@@ -19,8 +19,8 @@ function compileShader(shaderSource, shaderType) {
   gl.shaderSource(shader, shaderSource);
   gl.compileShader(shader);
   if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-      console.error(shaderSource);
-      abort('shader compiler error:\n' + gl.getShaderInfoLog(shader));
+    console.error(shaderSource);
+    abort('shader compiler error:\n' + gl.getShaderInfoLog(shader));
   }
 
   return shader;
@@ -32,7 +32,7 @@ function linkShader(vs, fs) {
   gl.attachShader(prog, fs);
   gl.linkProgram(prog);
   if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
-      abort('shader linker error:\n' + gl.getProgramInfoLog(prog));
+    abort('shader linker error:\n' + gl.getProgramInfoLog(prog));
   }
   return prog;
 };
@@ -65,9 +65,9 @@ export function loadShaderProgram(vsSource, fsSource, shaderLocations) {
 
 const quadPositions = new Float32Array([
   -1.0, -1.0, 0.0,
-   1.0, -1.0, 0.0,
-  -1.0,  1.0, 0.0,
-   1.0,  1.0, 0.0
+  1.0, -1.0, 0.0,
+  -1.0, 1.0, 0.0,
+  1.0, 1.0, 0.0
 ]);
 
 const quadBuffer = gl.createBuffer();
@@ -84,7 +84,7 @@ export function renderFullscreenQuad(program) {
   // Enable the bound buffer as the vertex attrib array for
   // program.a_position, using gl.enableVertexAttribArray
   gl.enableVertexAttribArray(program.a_position);
-  
+
   // Use gl.vertexAttribPointer to tell WebGL the type/layout for
   // program.a_position's access pattern.
   gl.vertexAttribPointer(program.a_position, 3, gl.FLOAT, gl.FALSE, 0, 0);

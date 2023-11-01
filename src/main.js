@@ -2,22 +2,26 @@ import { makeRenderLoop, camera, cameraControls, gui, gl } from './init';
 import ForwardRenderer from './renderers/forward';
 import ForwardPlusRenderer from './renderers/forwardPlus';
 import ClusteredDeferredRenderer from './renderers/clusteredDeferred';
+import ClusteredDeferredBloomRenderer from './renderers/clusteredDeferredBloom';
+import ClusteredDeferredOptimizedRenderer from './renderers/clusteredDeferredOptimized';
 import Scene from './scene';
 import Wireframe from './wireframe';
 
 const FORWARD = 'Forward';
 const FORWARD_PLUS = 'Forward+';
 const CLUSTERED = 'Clustered Deferred';
+const CLUSTERED_BLOOM = 'Clustered Deferred with Bloom';
+const CLUSTERED_OPTIMIZED = 'Clustered Deferred Optimized';
 
 const params = {
-  renderer: FORWARD_PLUS,
+  renderer: CLUSTERED_OPTIMIZED,
   _renderer: null,
 };
 
 setRenderer(params.renderer);
 
 function setRenderer(renderer) {
-  switch(renderer) {
+  switch (renderer) {
     case FORWARD:
       params._renderer = new ForwardRenderer();
       break;
@@ -27,10 +31,16 @@ function setRenderer(renderer) {
     case CLUSTERED:
       params._renderer = new ClusteredDeferredRenderer(15, 15, 15);
       break;
+    // case CLUSTERED_BLOOM:
+    //   params._renderer = new ClusteredDeferredBloomRenderer(15, 15, 15);
+    //   break;
+    case CLUSTERED_OPTIMIZED:
+      params._renderer = new ClusteredDeferredOptimizedRenderer(15, 15, 15);
+      break;
   }
 }
 
-gui.add(params, 'renderer', [FORWARD, FORWARD_PLUS, CLUSTERED]).onChange(setRenderer);
+gui.add(params, 'renderer', [FORWARD, FORWARD_PLUS, CLUSTERED, CLUSTERED_OPTIMIZED]).onChange(setRenderer);
 
 const scene = new Scene();
 scene.loadGLTF('models/sponza/sponza.gltf');
@@ -52,16 +62,16 @@ cameraControls.target.set(0, 2, 0);
 gl.enable(gl.DEPTH_TEST);
 
 function render() {
-  scene.update();  
+  scene.update();
   params._renderer.render(camera, scene);
 
   // LOOK: Render wireframe "in front" of everything else.
   // If you would like the wireframe to render behind and in front
   // of objects based on relative depths in the scene, comment out /
   //the gl.disable(gl.DEPTH_TEST) and gl.enable(gl.DEPTH_TEST) lines.
-  gl.disable(gl.DEPTH_TEST);
-  wireframe.render(camera);
-  gl.enable(gl.DEPTH_TEST);
+  // gl.disable(gl.DEPTH_TEST);
+  // wireframe.render(camera);
+  // gl.enable(gl.DEPTH_TEST);
 }
 
 makeRenderLoop(render)();
